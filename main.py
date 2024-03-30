@@ -57,6 +57,13 @@ def create_hero():
     return text
 
 
+def show_atributs(mas):
+    hp, power, agility, mind = tuple(mas)
+    text = "\n".join(["Здоровье: " + str(hp), "Сила: " + str(power), "Ловкость: " + str(agility),
+                      "Интелект: " + str(mind)])
+    return text
+
+
 def make_response(text, tts=None, card=None, state=None, buttons=None):
     resposne = {
         'text': text,
@@ -90,32 +97,58 @@ def button(title, payload=None, url=None, hide=False):
 
 def handler(event, context):
     text = say_hello()
+    atr = [0, 0, 0, 0] #atr - атрибуты
+    type_hero = "None"
     if 'request' in event and \
             'original_utterance' in event['request'] \
             and len(event['request']['original_utterance']) > 0:
         state = event.get('state').get(STATE_RQUEST_KEY, {})
         intents = event['request'].get('nlu', {}).get('intents')
         location = state.get('location')
+        atr = state.get("atr")
+        type_hero = state.get("type_hero")
         user_message = "".join(str(event['request']['original_utterance']).split("."))
         if location == 0:
-            if user_message == 'Да' or 'Yes' in intents:
-                text = create_hero()
-                return make_response(text, state={'location': 1},
-                                     buttons=[
-                                         button('Воин', hide=True),
-                                         button('Лучник', hide=True),
-                                         button('Маг', hide=True)
-                                     ])
-            else:
-                text = say_goodbye()
-                return end_work(text, event)
+                if user_message == 'Да' or 'Yes' in intents:
+                        text = create_hero()
+                        return make_response(text, state={'location': 1},
+                                buttons=[
+                                        button('Воин', hide=True),
+                                        button('Лучник', hide=True),
+                                        button('Маг', hide=True)
+                                ])
+                else:
+                        text = say_goodbye()
+                        return end_work(text, event)
+        if location == 1:
+                if user_message == "Маг":
+                        atr = [50, 10, 10, 20]
+                        text = "Отлично! Вот ваши атрибуты:" + "\n" + show_atributs(atr)
+                        return make_response(text, state={'location': 2, 'type_hero': 'wizard', 'atr': atr},
+                                buttons=[
+                                        button('Отправиться в путь', hide=True),
+                                ])
+                if user_message == "Лучник":
+                        atr = [50, 10, 20, 10]
+                        text = "Отлично! Вот ваши атрибуты:" + "\n" + show_atributs(atr)
+                        return make_response(text, state={'location': 2, 'type_hero': 'archer', 'atr': atr},
+                                buttons=[
+                                        button('Отправиться в путь', hide=True),
+                                ])
+                if user_message == "Воин":
+                        atr = [50, 20, 10, 10]
+                        text = "Отлично! Вот ваши атрибуты:" + "\n" + show_atributs(atr)
+                        return make_response(text, state={'location': 2, 'type_hero': 'warrior', 'atr': atr},
+                                buttons=[
+                                        button('Отправиться в путь', hide=True),
+                                ])
         text = "Пока что - это конец!"
         return end_work(text, event)
-    return make_response(text, state={'location': 0},
-                         buttons=[
-                             button('Да', hide=True),
-                             button('Нет', hide=True)
-                         ])
+    return make_response(text, state={'location': 0, 'type_hero': type_hero, 'atr': atr},
+            buttons=[
+                    button('Да', hide=True),
+                    button('Нет', hide=True)
+                ])
 
 
 if __name__ == '__main__':

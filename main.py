@@ -18,14 +18,15 @@ def main():
     }
     return jsonify(handler(request.json, response))
 
-    def say_hello():
-        var = randint(0, 2)
-        hello_text = [
-            'Привет, ты готов к новому приключению?',
-            'Привет, готов ли ты стать героем и покарать древнее зло?',
-            'Привет, отправляемся спасать мир?',
-        ]
-        return hello_text[var]
+
+def say_hello():
+    var = randint(0, 2)
+    hello_text = [
+        'Привет, ты готов к новому приключению?',
+        'Привет, готов ли ты стать героем и покарать древнее зло?',
+        'Привет, отправляемся спасать мир?',
+    ]
+    return hello_text[var]
 
 
 def say_goodbye():

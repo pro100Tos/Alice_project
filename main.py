@@ -3,6 +3,8 @@ from random import randint
 
 STATE_RQUEST_KEY = 'session'
 STATE_RESPONS_KEY = 'session_state'
+main_baff = []
+max_hp = 50
 
 app = Flask(__name__)
 
@@ -114,6 +116,7 @@ def button(title, payload=None, url=None, hide=False):
 
 
 def handler(event, context):
+    global max_hp, main_baff
     text = say_hello()
     atr = [0, 0, 0, 0]  # atr - атрибуты
     type_hero = "None"
@@ -128,8 +131,6 @@ def handler(event, context):
         type_hero = state.get("type_hero")
         old_location = state.get('old_location')
         user_message = "".join(str(event['request']['original_utterance']).split("."))
-        main_baff = []
-        max_hp = 50
         debaf = False
         try:
             debaf = state.get('debaf')
@@ -478,7 +479,7 @@ def handler(event, context):
             if user_message == "Продолжить путь":
                 text = "Долгое путешествие через пустыню заканчивается вашим возвращением в родной город, " \
                        "где вас принимают как героя. Опыт, набранный в путешествии, делает вас мудрее и сильнее. " \
-                       "Это приключение окончено, но впереди ещё много других. Хотите начать говую игру?"
+                       "Это приключение окончено, но впереди ещё много других. Хотите начать новую игру?"
                 return make_response(text, state={'location': 0, 'type_hero': type_hero, 'atr': atr, 'old_location': 0},
                                      buttons=[
                                          button('Да', hide=True),

@@ -3,6 +3,8 @@ from random import randint
 
 STATE_RQUEST_KEY = 'session'
 STATE_RESPONS_KEY = 'session_state'
+main_baff = []
+max_hp = 50
 
 app = Flask(__name__)
 
@@ -114,6 +116,7 @@ def button(title, payload=None, url=None, hide=False):
 
 
 def handler(event, context):
+    global main_baff, max_hp
     text = say_hello()
     atr = [0, 0, 0, 0]  # atr - атрибуты
     type_hero = "None"
@@ -128,8 +131,6 @@ def handler(event, context):
         type_hero = state.get("type_hero")
         old_location = state.get('old_location')
         user_message = "".join(str(event['request']['original_utterance']).split("."))
-        main_baff = []
-        max_hp = 50
         debaf = False
         try:
             debaf = state.get('debaf')
@@ -494,8 +495,8 @@ def handler(event, context):
                                  buttons=[
                                      button('Поздороваться с ним', hide=True),
                                  ])
-        if location == 36:
-            if user_message == "Поздороваться с ним" or old_location == 37:
+        if location == 37:
+            if user_message == "Поздороваться с ним" or old_location == 38:
                 text = "Эльф по имени Зик узнаёт вас, но выглядит обеспокоенным." + "\n" + \
                        "Вы простие друга рассказать о том, что его тревожит." + "\n" + \
                        "Эльф рассказывает вам о подозрительных, участившихся нападениях гоблинов на его родной город." + \
@@ -861,9 +862,8 @@ def handler(event, context):
                 text = "День закончился и город затих. Ночью случился настоящий переполох. " \
                        "На город напала восставшая нежить." \
                        "Стража города отбивалась изо всех сил и под утро им удалось очистить город." \
-                       "Жители города в ужасе. Предположительно,мертвецы полезли из древних захоронений в пещерах," \
-                       "но, несмотря на щедрую оплату, никто не решался спуститься в подземелья, " \
-                       "чтобы успокоить мёртвых и найти причину их восстания." \
+                       "Выяснилось, что мертвецы вышли из древних захоронений в пещерах." \
+                       "Несмотря на щедрую оплату, никто не решался спуститься в подземелья." \
                        "Вы вызыватесть добровольцем. Перед спуском в подземелья, " \
                        "вы решаете сходить на рынок и подготовиться. Чем запасётесь?"
                 return make_response(text, state={'location': 75, 'type_hero': type_hero, 'atr': atr,
@@ -890,11 +890,292 @@ def handler(event, context):
         if location == 76:
             text = "Вы входите в подземелья. Кромешная тьма расступается перед светом вашего факела." \
                    "Вдруг в углу вы замечаете чьё-то движение. " \
+                   "На вас со злобным рычанием выскакивает мертвец." \
                    "Вам придётся вступить с ним в бой."
-            return make_response(text, state={'location': 77, 'type_hero': type_hero, 'atr': atr,
+            if type_hero == 'wizard':
+                if make_fight(atr[3], 23):
+                    return make_response(text, state={'location': 77, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('В бой!', hide=True)
+                    ])
+                else:
+                    return make_response(text, state={'location': 78, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('В бой!', hide=True)
+                    ])
+        if location == 77:
+            if user_message == 'В бой!':
+                text = "Пламя окутало мертвеца, оставив от него горсть пепла. " \
+                       "Вы победили в этой схватке. " \
+                       "Вы можете продолжить путь."
+                return make_response(text, state={'location': 79, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Продолжить путь', hide=True)
+                ])
+        if location == 78:
+            if user_message == 'В бой!':
+                text = "К сожалению, вы терпите поражение." \
+                       "Вам удалось сбежать, но мертвец смог ранить вас." \
+                       "Ваше здоровье понижено на 10 очков." \
+                       "Вы можете продолжить путь."
+                atr[0] -= 10
+                if 'зелье лечения' in main_baff:
+                    return make_response(text, state={'location': 79, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Использовать зелье лечения', hide=True),
+                        button('Продолжить путь', hide=True)
+                    ])
+                else:
+                    return make_response(text, state={'location': 79, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Продолжить путь', hide=True)
+                    ])
+        if location == 79:
+            if user_message == 'Использовать зелье лечения':
+                text = "Вы используете зелье лечения. Вы снова полностью здоровы. " \
+                       "Вы продолжаете путь." \
+                       "Впереди вас ждёт винтвая лестница вниз." \
+                       "Вы спускаетесь по ней и останавливаетесь на пороге освещённого зала." \
+                       "Предчуствие подсказывает вам быть осторожными."
+                del main_baff[main_baff.index('зелье лечения')]
+                atr[0] = max_hp
+            elif user_message == 'Продолжить путь':
+                text = "Вы продолжаете путь." \
+                       "Впереди вас ждёт винтвая лестница вниз." \
+                       "Вы спускаетесь по ней и останавливаетесь на пороге освещённого зала." \
+                       "Предчуствие подсказывает вам быть осторожными."
+
+            return make_response(text, state={'location': 80, 'type_hero': type_hero, 'atr': atr,
                                               'old_location': location}, buttons=[
-                button('В бой!', hide=True),
+                button('Войти в зал', hide=True)
             ])
+        if location == 80:
+            if user_message == 'Войти в зал':
+                if make_fight(atr[2], 15):
+                    text = "Вы входите зал, и вдруг из стены в вас летит стрела," \
+                           "но вам чудом удаётся увернуться от ловушки."
+                else:
+                    text = "Вы входите зал, и вдруг из стены в вас летит стрела," \
+                           "которая попадает вам в ногу. Ваше здоровье понижено на 5 очков."
+                    atr[0] -= 5
+                text = text + "Вы решаете осмотреться. Зал оказывается гробницей." \
+                              "Вокруг множество гробов, а в них пока ещё спящие мертвецы." \
+                              "Впереди вы замечаете две двери. В какую войдёте?"
+                return make_response(text, state={'location': 81, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Левая дверь', hide=True),
+                    button('Правая дверь', hide=True)
+                ])
+            if main_baff.count('рычаг') == 1 and \
+                    (user_message == 'Использовать зелье лечения' or user_message == 'Уйти'):
+                if user_message == 'Использовать зелье лечения':
+                    text = 'Вы используете зелье лечения. Вы снова полностью здоровы. ' \
+                           'Вам осталось обследовать ещё одну комнату.'
+                    del main_baff[main_baff.index('зелье лечения')]
+                    atr[0] = max_hp
+                else:
+                    text = 'Вы вернулись в зал. Вам осталось обследовать ещё одну комнату.'
+                if old_location == 83:
+                    return make_response(text, state={'location': 81, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Правая дверь', hide=True)
+                    ])
+                else:
+                    return make_response(text, state={'location': 81, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Левая дверь', hide=True)
+                    ])
+            if main_baff.count('рычаг') == 2 and \
+                    (user_message == 'Использовать зелье лечения' or user_message == 'Уйти'):
+                text = 'Выходя из комнаты вы слышите странный щелчок и видите, как в стене открывается потайной проход.' \
+                       'Громкий звук заставил мертвецов проснуться, и они, преградив дорогу, бросились на вас.'
+                return make_response(text, state={'location': 84, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('В бой!', hide=True),
+                ])
+        if location == 81:
+            if user_message == 'Левая дверь':
+                text = "Вы открываете левую дверь. За ней находится просторная комната. " \
+                       "Ваш взгляд падает на сундук, на котором... Лежит маленький дракон! " \
+                       "Ваш визит не остался незамеченным - дракон начал расправлять крылья, яростно сверкнув глазами."
+                if 'мясо' in main_baff:
+                    return make_response(text, state={'location': 82, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Предложить дракону мясо', hide=True),
+                        button('Вступить в бой', hide=True)
+                    ])
+                else:
+                    return make_response(text, state={'location': 82, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Убежать', hide=True),
+                        button('Вступить в бой', hide=True)
+                    ])
+            elif user_message == 'Правая дверь':
+                text = "За правой дверью вы находите старый алтарь. Потёртая каменная плита гласит: " \
+                       "'Ваша сила - в вашей крови. Крови, которую вы получили от своих предков.'. " \
+                       "В алтаре есть щель для монет. Что будете делать?"
+                return make_response(text, state={'location': 83, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Кинуть монету', hide=True),
+                    button('Ничего не делать', hide=True)
+                ])
+        if location == 82:
+            if user_message == 'Предложить дракону мясо':
+                text = "Увидев в вашей руке мясо, дракон с любопытсвом принюхался. " \
+                       "Он осторожно подошёл к вам и начал есть из ваших рук. " \
+                       "Вам удалось приручить маленького дракона. Теперь он будет помогать вам в битвах. " \
+                       "Что собираетесь делать дальше?"
+                del main_baff[main_baff.index('мясо')]
+                main_baff.append('дракон')
+                atr[3] += 10
+                return make_response(text, state={'location': 83, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Открыть сундук', hide=True),
+                    button('Уйти', hide=True)
+                ])
+            elif user_message == 'Вступить в бой':
+                if make_fight(atr[3], 28):
+                    text = "Вам удалось одолеть маленького дракона. Чешуя дракона обладает целебными свойствами. " \
+                           "Вы получили чешую дракона. Что собираетесь делать дальше?"
+                    return make_response(text, state={'location': 83, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Открыть сундук', hide=True),
+                        button('Уйти', hide=True)
+                    ])
+                else:
+                    text = "К сожалению, вы потерпели поражение. Дракон нанёс вам сильные ожоги. " \
+                           "Ваше здоровье понижено на 20 очков. " \
+                           "Вам удалось убежать из комнаты, и по пути вы задеваете какой-то рычаг."
+            elif user_message == 'Убежать':
+                text = "Вы решаете убежать от битвы, но на выходе из комнаты вас настигает пламя дракона. " \
+                       "Ваше здоровье понижено на 25 очков. " \
+                       "Вам удалось убежать из комнаты, и по пути вы задеваете какой-то рычаг."
+            if "зелье лечения" in main_baff:
+                main_baff.append('рычаг')
+                return make_response(text, state={'location': 80, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Использовать зелье лечения', hide=True),
+                    button('Уйти', hide=True)
+                ])
+            else:
+                main_baff.append('рычаг')
+                return make_response(text, state={'location': 80, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Уйти', hide=True)
+                ])
+        if location == 83:
+            if user_message == 'Открыть сундук':
+                text = "В сундуке вы находите магический свиток. Ваш интеллект повышен на 5 очков. " \
+                       "Продвигаясь к выходу вы замечаете рычаг. Вы нажимаете на него, но ничего не происходит."
+                main_baff.append('рычаг')
+                return make_response(text, state={'location': 80, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Уйти', hide=True)
+                ])
+            if user_message == 'Кинуть монету':
+                text = "Кинув монету, вы видете, как вокруг алтаря появилось слабое свечение. " \
+                       "Вы чувствуете слабость, но ощущаете, что стали сильнее. " \
+                       "Ваше максимальное здоровье снижено на 5 очков. Ваша сила увеличилась на 5 очков." \
+                       "Вы заметили рычаг и нажали на него. Ничего не произошло."
+                max_hp = 45
+                atr[1] += 5
+            elif user_message == "Ничего не делать":
+                text = "Вы решаете ничего не делать. Вы заметили рычаг и нажали на него. Ничего не произошло."
+            main_baff.append('рычаг')
+            return make_response(text, state={'location': 80, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location}, buttons=[
+                button('Уйти', hide=True)
+            ])
+        if location == 84:
+            if user_message == 'В бой!':
+                if type_hero == 'wizard':
+                    if make_fight(atr[3], 30):
+                        text = "В храбом бою вам удалось одолеть мертвецов. " \
+                               "На одном из них вы замечаете зачарованный доспех."
+                        if atr[1] >= 15:
+                            text += "Вы надеваете этот доспех, который наполняет вас магической силой. " \
+                                    "Ваш интеллект повышен на 10 очков."
+                        else:
+                            text += "К сожалению, этот доспех слишком тяжёл для вас."
+                    else:
+                        atr[0] -= 20
+                        if atr[0] <= 0:
+                            text = "К сожалению вы терпите поражение, хотите ли вы начать своё путешествие заново?"
+                            return end_work(text, event)
+                        text = "Вы храбро бились, но силы были не равны, и без потерь вам уйти не удалось. " \
+                               "Ваше здоровье снижено на 20 очков."
+                if 'зелье лечения' in main_baff:
+                    return make_response(text, state={'location': 85, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Продолжить путь', hide=True),
+                        button('Использовать зелье лечения', hide=True)
+                    ])
+                else:
+                    return make_response(text, state={'location': 85, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('Продолжить путь', hide=True)
+                    ])
+        if location == 85:
+            if user_message == 'Использовать зелье лечения':
+                del main_baff[main_baff.index('зелье лечения')]
+                atr[0] = max_hp
+                text = "Вы используете зелье лечения. Вы снова полностью здоровы. Вы продолжаете путь. " \
+                       "Спустя долгое время блуждания по корридорам вы натыкаетесь на массивную дверь."
+            elif user_message == 'Продолжить путь':
+                text = "Вы продолжаете путь. Спустя долгое время блуждания по корридорам " \
+                        "вы натыкаетесь на массивную дверь."
+            return make_response(text, state={'location': 86, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location}, buttons=[
+                button('Открыть дверь', hide=True)
+            ])
+        if location == 86:
+            if user_message == 'Открыть дверь':
+                text = "За дверью находится просторное комната, оплетённая корнями. В центре комнаты находится трон," \
+                       "на котором сидит человек в чёрном балахоне. Он вас заметил и злобно усмехнулся: " \
+                       "'Тоже пришёл за камнем цветка? Боюсь ты опоздал.'"
+                return make_response(text, state={'location': 87, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Поговорить с колдуном', hide=True),
+                ])
+        if location == 87:
+            if user_message == 'Поговорить с колдуном':
+                text = "Колдун сообщил вам, что ему удалось найти цветок Зла " \
+                       "и с помощь его силы он собирается поднять армию мертвецов и захватить власть над королеством." \
+                       "Колдун вступает с вами в бой."
+                if type_hero == 'wizard':
+                    if make_fight(atr[3], 35):
+                        return make_response(text, state={'location': 8, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location}, buttons=[
+                            button('В бой!', hide=True),
+                        ])
+                    else:
+                        text = "К сожалению вы терпите поражение, хотите ли вы начать своё путешествие заново?"
+                        return end_work(text, event)
+        if location == 88:
+            text = "Это был трудный бой, но вам удалось справиться со злым колдуном. " \
+                   "Теперь мертвецы больше не потревожат жителей города по ночам." \
+                   " Вы замечаете на груди колдуна алый камень." \
+                   "Скорее всего это и есть тот самый камень цветка Зла."
+            return make_response(text, state={'location': 89, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location}, buttons=[
+                button('Взять камень', hide=True),
+                button('Уйти', hide=True)
+            ])
+        if location == 89:
+            if user_message == 'Взять камень':
+                text = "Теперь вы стали обладателем огромной магической силы, заключённой в камне. " \
+                       "Но теперь вашей душой завладела тьма и вы будете распространять её, пока не придёт тот, " \
+                       "кто сможет сравниться с вами по силе и свергнет вас, либо мир не погрузиться во тьму." \
+                       "Начать новое приключение?"
+            if user_message == 'Уйти':
+                text = "Вы уходите и проход за вами заваливает камнями. " \
+                       "Вы вернулись в город, где вас встречают как героя. Вы заслужили денежное вознаграждение." \
+                       "Ваше приключение окончено, но впререди ждут другие. Начать новое приключение?"
+                return make_response(text, state={'location': 0, 'type_hero': type_hero, 'atr': atr, 'old_location': 0},
+                                     buttons=[
+                                         button('Да', hide=True),
+                                         button('Нет', hide=True)
+                                     ])
         text = "Извините я вас не поняла." + "\n" + \
                "Хотите ли вы продолжить путешествие?"
         return make_response(text, state={'location': old_location, 'type_hero': 'archer', 'atr': atr,

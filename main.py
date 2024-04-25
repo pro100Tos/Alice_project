@@ -128,6 +128,8 @@ def handler(event, context):
         type_hero = state.get("type_hero")
         old_location = state.get('old_location')
         user_message = "".join(str(event['request']['original_utterance']).split("."))
+        main_baff = []
+        max_hp = 50
         debaf = False
         try:
             debaf = state.get('debaf')
@@ -183,7 +185,7 @@ def handler(event, context):
                 atr = [50, 10, 10, 20]
                 text = "Отлично! Вот ваши атрибуты:" + "\n" + show_atributs(atr)
                 return make_response(text,
-                                     state={'location': 2, 'type_hero': 'wizard', 'atr': atr, 'old_location': location},
+                                     state={'location': 70, 'type_hero': 'wizard', 'atr': atr, 'old_location': location},
                                      buttons=[
                                          button('Отправиться в путь', hide=True),
                                      ])
@@ -773,6 +775,125 @@ def handler(event, context):
                 button('Разрушить плотину', hide=True),
                 button('Просто пойти в атаку', hide=True),
                 button('Поджечь лес', hide=True),
+            ])
+        if location == 70:
+            text = "Ваше путешествие начинается в тихом горном городке Прехевилль." \
+                   "Преххевиль стал известен на весь мир в первую очередь как образовательный и научный центр," \
+                   "поскольку именно здесь был построен Харлондский университет магии." \
+                   "Вы можете передохнуть в трактире, или направиться в Харлондский университет."
+
+            return make_response(text, state={'location': 71, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location}, buttons=[
+                button('Отправиться в Харлондский университет', hide=True),
+                button('Отправиться в трактир', hide=True),
+            ])
+        if location == 71:
+            if user_message == 'Отправиться в трактир':
+                text = "Вы решаете пойти в трактир." \
+                       "В трактире вас встречает шум разговоров, чей-то смех, запах еды и выпивки." \
+                       "Вечером в таких местах всегда много народу." \
+                       "Вы решаете поговорить с трактирщиком." \
+                       "- Добро пожаловать, путник. Не желаете чего нибудь? Еда, выпивка или снять комнату??"
+                return make_response(text, state={'location': 73, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Спросить о последних новостях', hide=True),
+                    button('Уйти', hide=True),
+                ])
+            if user_message == 'Отправиться в Харлондский университет':
+                text = "Вы отправляетесь в Харлондский университет, где вам разрешают посетить их библиотеку. " \
+                       "Вы решаете провести время за чтением. Какую книгу выберете?"
+                return make_response(text, state={'location': 72, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Записки плута', hide=True),
+                    button('Путь гнева', hide=True),
+                    button('Ловкость ума', hide=True)
+                ])
+        if location == 72:
+            if user_message == 'Записки плута':
+                text = 'Ваша ловкость повышена на 3 очка'
+            if user_message == 'Путь гнева':
+                text = 'Ваша сила повышена на 3 очка'
+            if user_message == 'Ловкость ума':
+                text = "Ваш интеллект повышен на 3 очка."
+            return make_response(text, state={'location': 73, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location}, buttons=[
+                button('Уйти', hide=True),
+                button('Отправиться в трактир', hide=True)
+            ])
+        if location == 73:
+            if user_message == 'Спросить о последних новостях':
+                text = "- Да какие тут новости? Пару пьных драк, да мелкие кражи." \
+                       "Город у нас тихий, событий почти нет." \
+                       "Хотя недавно один фермер утверждал, что видел какие-то огни в пещерах, мол призраки ходят." \
+                       "Да только не верит ему никто, преукрасить да приврать он горазд, так ещё и пьяница."
+                return make_response(text, state={'location': 74, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Спросить о пещерах', hide=True),
+                    button('Уйти', hide=True),
+                ])
+            if user_message == 'Уйти':
+                text = "День подходит к концу, и вы решаете закончить ваши дела на сегодня."
+                return make_response(text, state={'location': 75, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Завершить день', hide=True),
+                ])
+        if location == 74:
+            if user_message == 'Спросить о гротах':
+                text = "- Вокруг этих пещер много всяких историй и легенд ходит." \
+                       "Дело в том, что там находятся вякие древние гробницы, да святилища" \
+                       "Вот и видят там призраков и прочую нечисть." \
+                       "Есть ещё одна легенда о Цветке Зла. Говорят, что растёт такой в одной из пещер, " \
+                       "и что серцевина его - волшебный камень, способный сделать кого угодно могущественным. " \
+                       "Но при этом человек очень злым становиться."
+                return make_response(text, state={'location': 75, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Завершить день', hide=True),
+                    button('Отправиться в Харлондский университет', hide=True)
+                ])
+            if user_message == 'Уйти':
+                text = "День подходит к концу, и вы решаете закончить ваши дела на сегодня."
+                return make_response(text, state={'location': 75, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Завершить день', hide=True),
+                ])
+        if location == 75:
+            if user_message == 'Завершить день':
+                text = "День закончился и город затих. Ночью случился настоящий переполох. " \
+                       "На город напала восставшая нежить." \
+                       "Стража города отбивалась изо всех сил и под утро им удалось очистить город." \
+                       "Жители города в ужасе. Предположительно,мертвецы полезли из древних захоронений в пещерах," \
+                       "но, несмотря на щедрую оплату, никто не решался спуститься в подземелья, " \
+                       "чтобы успокоить мёртвых и найти причину их восстания." \
+                       "Вы вызыватесть добровольцем. Перед спуском в подземелья, " \
+                       "вы решаете сходить на рынок и подготовиться. Чем запасётесь?"
+                return make_response(text, state={'location': 75, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('Едой', hide=True),
+                    button('Лекарствами', hide=True),
+                    button('Магическими артефактами', hide=True),
+                ])
+        if location == 75:
+            if user_message == 'Лекарствами':
+                text = "Вы приобрели зелье лечения." \
+                       "Теперь вы чувствуете, что готовы к тому, что ждёт вас в подземельях."
+                main_baff.append('зелье лечения')
+            if user_message == 'Магическими артефактами':
+                text = "Вы приобрели кулон Скрытого глаза. Ваша ловкость повышена на 5 очков." \
+                       "Теперь вы чувствуете, что готовы к тому, что ждёт вас в подземельях."
+                atr[2] += 5
+            if user_message == 'Едой':
+                text = "На голодный желудок ничего путного не выйдет.Вы приобрели вяленое мясо." \
+                       " Теперь вы чувствуете, что готовы к тому, что ждёт вас в подземельях."
+                main_baff.append('мясо')
+            return make_response(text, state={'location': 76, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location})
+        if location == 76:
+            text = "Вы входите в подземелья. Кромешная тьма расступается перед светом вашего факела." \
+                   "Вдруг в углу вы замечаете чьё-то движение. " \
+                   "Вам придётся вступить с ним в бой."
+            return make_response(text, state={'location': 77, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location}, buttons=[
+                button('В бой!', hide=True),
             ])
         text = "Извините я вас не поняла." + "\n" + \
                "Хотите ли вы продолжить путешествие?"

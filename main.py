@@ -41,6 +41,18 @@ def say_goodbye():
     return goodbye_text[var]
 
 
+def say_help():
+    help_text = "После выбора персонажа, война, лучника или мага" + \
+                " вы можете пройти их сюжетную линию, для этого " + \
+                " вам требуется внимательно вслушиваться или вчитываться в предложенные" + \
+                " Алисой варианты действий." + \
+                " На благоприятный исход вашего выбора, также влияют атрибуты" + \
+                " вашего персонажа." + \
+                " Вы можете поинтересоваться своими атрибутами, для этого" + \
+                ' скажите Алисе "Покажи мои атрибуты".'
+    return help_text
+
+
 def end_work(text, event):
     return {
         'version': event['version'],
@@ -116,6 +128,43 @@ def handler(event, context):
         type_hero = state.get("type_hero")
         old_location = state.get('old_location')
         user_message = "".join(str(event['request']['original_utterance']).split("."))
+        debaf = False
+        try:
+            debaf = state.get('debaf')
+        except Exception:
+            pass
+        false_flag = True
+        try:
+            false_flag = state.get('false_flag')
+        except Exception:
+            pass
+        if 'gooodbye' in intents:
+            text = say_goodbye()
+            return end_work(text, event)
+        if not false_flag:
+            if user_message == 'Нет' or 'No' in intents:
+                text = say_goodbye()
+                return end_work(text, event)
+        if user_message == "Помощь" or 'Help' in intents:
+            text = say_help() + "\n" + \
+                   "Хотите ли вы продолжить путешествие?"
+            if false_flag:
+                location, old_location = old_location, location
+            return make_response(text, state={'location': old_location, 'type_hero': 'archer', 'atr': atr,
+                                              'old_location': location, 'debaf': debaf, 'false_flag': False},
+                                 buttons=[
+                                     button('Продолжить путешествие', hide=True),
+                                 ])
+        if user_message == "Покажи мои атрибуты" or 'show_atr' in intents:
+            text = show_atributs(atr) + "\n" + \
+                   "Хотите ли вы продолжить путешествие?"
+            if false_flag:
+                location, old_location = old_location, location
+            return make_response(text, state={'location': old_location, 'type_hero': 'archer', 'atr': atr,
+                                              'old_location': location, 'debaf': debaf, 'false_flag': False},
+                                 buttons=[
+                                     button('Продолжить путешествие', hide=True),
+                                 ])
         if location == 0:
             if user_message == 'Да' or 'Yes' in intents:
                 text = create_hero()
@@ -129,16 +178,6 @@ def handler(event, context):
             else:
                 text = say_goodbye()
                 return end_work(text, event)
-        if user_message == "Покажи мои атрибуты":
-            text = show_atributs(atr)
-            debaf = False
-            if old_location == 38:
-                debaf = state.get('debaf')
-            return make_response(text, state={'location': old_location, 'type_hero': 'archer', 'atr': atr,
-                                              'old_location': location, 'debaf': debaf},
-                                 buttons=[
-                                     button('Продолжить путешествие', hide=True),
-                                 ])
         if location == 1:
             if user_message == "Маг":
                 atr = [50, 10, 10, 20]
@@ -148,7 +187,7 @@ def handler(event, context):
                                      buttons=[
                                          button('Отправиться в путь', hide=True),
                                      ])
-            if user_message == "Лучник":
+            if user_message == "Лучник" or old_location == 31:
                 atr = [50, 10, 20, 10]
                 text = "Отлично! Вот ваши атрибуты:" + "\n" + show_atributs(atr)
                 return make_response(text, state={'location': 31, 'type_hero': 'archer', 'atr': atr,
@@ -164,33 +203,311 @@ def handler(event, context):
                                      buttons=[
                                          button('Отправиться в путь', hide=True),
                                      ])
+        if location == 2:
+            if user_message == "Отправиться в путь":
+                text = "Вы смело шагаете в неизвестность. По пути вам встречается старый заброшенный замок, который, как говорят, охраняется духом древнего воина."
+                return make_response(text, state={'location': 11, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать замок', hide=True),
+                                         button('Обойти замок', hide=True),
+                                     ])
+        if location == 11:
+            if user_message == "Исследовать замок":
+                text = "Вы входите в замок и чувствуете присутствие чего-то сверхъестественного. Вдруг перед вами возникает дух воина, который требует доказать вашу храбрость."
+                return make_response(text, state={'location': 12, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Принять вызов', hide=True),
+                                         button('Отступить', hide=True),
+                                     ])
+        if location == 12:
+            if user_message == "Принять вызов":
+                if atr[0] > 40:  # типо необходимый уровень силы для победы - больше 40
+                    text = "Смело приняв вызов, вы демонстрируете свою силу и мастерство. Дух восхищен и дарит вам магический меч, увеличивающий ваши атрибуты."
+                    atr[0] += 5  # увеличиваем силу
+                    atr[1] += 5  # увеличиваем защиту
+                    return make_response(text, state={'location': 13, 'type_hero': 'warrior', 'atr': atr},
+                                         buttons=[
+                                             button('Продолжить путешествие', hide=True),
+                                         ])
+                else:
+                    text = "К сожалению, ваша сила оказалась недостаточной. Дух отвергает вас, и вы вынуждены отступить."
+                    return make_response(text, state={'location': 11, 'type_hero': 'warrior', 'atr': atr},
+                                         buttons=[
+                                             button('Покинуть замок', hide=True),
+                                         ])
+        if location == 13:
+            if user_message == "Продолжить путешествие":
+                text = "Оснащенный магическим мечом, вы чувствуете себя непобедимым и продолжаете путешествие. По пути вы находите разделенную деревню, где жители просят о вашей помощи в урегулировании конфликта."
+                return make_response(text, state={'location': 14, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Помочь деревне', hide=True),
+                                         button('Игнорировать и продолжить путешествие', hide=True),
+                                     ])
+
+        if location == 14:
+            if user_message == "Помочь деревне":
+                text = "Вы решаете помочь деревне. Ваше вмешательство и авторитет воина помогают найти компромисс между спорящими сторонами. Благодарные жители дарят вам редкие травы, которые увеличивают ваше здоровье."
+                atr[2] += 5  # увеличиваем здоровье
+                return make_response(text, state={'location': 15, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Продолжить путешествие', hide=True),
+                                     ])
+            elif user_message == "Игнорировать и продолжить путешествие":
+                text = "Вы решаете не вмешиваться в дела деревни и продолжаете свой путь. Перед вами открываются новые земли и возможности."
+                return make_response(text, state={'location': 16, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать новые земли', hide=True),
+                                     ])
+
+        if location == 15:
+            if user_message == "Продолжить путешествие":
+                text = "С новыми силами вы отправляетесь в новое приключение, где вас ждут неведомые земли и новые испытания."
+                return make_response(text, state={'location': 17, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать неизведанное', hide=True),
+                                         button('Вернуться домой', hide=True),
+                                     ])
+        if location == 17:
+            if user_message == "Исследовать неизведанное":
+                text = "Отправляясь в неизведанные земли, вы сталкиваетесь с древними руинами, скрытыми в глубине таинственного леса. Здесь, среди забытых артефактов, вы чувствуете, что каждый шаг может быть наполнен как открытиями, так и опасностями."
+                return make_response(text, state={'location': 18, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать руины', hide=True),
+                                         button('Пройти мимо', hide=True),
+                                     ])
+            elif user_message == "Вернуться домой":
+                text = "Решив, что приключения должны когда-то закончиться, вы поворачиваете назад, к родным землям. Дома вас ждут с теплотой и радостью, а ваши рассказы о путешествиях становятся любимыми историями на вечерах."
+                return make_response(text, state={'location': 19, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Закончить путешествие', hide=True),
+                                     ])
+
+        if location == 18:
+            if user_message == "Исследовать руины":
+                text = "Исследуя древние руины, вы находите потайную комнату, в которой хранится могущественный артефакт. Этот предмет обещает большую силу, но его охраняет страж."
+                return make_response(text, state={'location': 20, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Сразиться со стражем', hide=True),
+                                         button('Отступить и сохранить находку в тайне', hide=True),
+                                     ])
+            elif user_message == "Пройти мимо":
+                text = "Вы решаете не рисковать и пройти мимо древних руин. Путешествие продолжается, ведя вас через новые земли, полные чудес и опасностей."
+                return make_response(text, state={'location': 21, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Продолжить путешествие', hide=True),
+                                     ])
+
+        if location == 20:
+            if user_message == "Сразиться со стражем":
+                if atr[0] > 45:  # проверка силы
+                    text = "Ваша мощь и мастерство владения мечом позволяют победить стража. Артефакт теперь ваш. Он увеличивает вашу силу и магию."
+                    atr[0] += 10  # увеличиваем силу
+                    atr[3] += 10  # увеличиваем магию
+                    return make_response(text, state={'location': 22, 'type_hero': 'warrior', 'atr': atr},
+                                         buttons=[
+                                             button('Продолжить путешествие с новой силой', hide=True),
+                                         ])
+                else:
+                    text = "Попытка сразиться со стражем оказывается неудачной. Вы вынуждены отступить, но знания о существовании артефакта остаются с вами."
+                    return make_response(text, state={'location': 18, 'type_hero': 'warrior', 'atr': atr},
+                                         buttons=[
+                                             button('Попробовать ещё раз', hide=True),
+                                             button('Отойти и продолжить путь', hide=True),
+                                         ])
+        if location == 22:
+            text = "Обладая новой силой и магическим артефактом, вы чувствуете, что способны на большее. Впереди много путей, каждый из которых обещает свои приключения и открытия."
+            return make_response(text, state={'location': 23, 'type_hero': 'warrior', 'atr': atr},
+                                 buttons=[
+                                     button('Исследовать Северные горы', hide=True),
+                                     button('Отправиться в Южные пустыни', hide=True),
+                                     button('Вернуться в родной город', hide=True),
+                                 ])
+
+        if location == 23:
+            if user_message == "Исследовать Северные горы":
+                text = "Северные горы известны своими суровыми условиями и древними тайнами. Поднимаясь по склонам, вы сталкиваетесь с племенем горных троллей, которые не приветствуют посторонних."
+                return make_response(text, state={'location': 24, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Переговорить с троллями', hide=True),
+                                         button('Сражаться с троллями', hide=True),
+                                         button('Обойти их территорию', hide=True),
+                                     ])
+            elif user_message == "Отправиться в Южные пустыни":
+                text = "Южные пустыни - место жаркое и безжизненное. Но даже здесь есть жизнь. На горизонте вы видите караван верблюдов, который, возможно, сможет помочь вам в вашем путешествии."
+                return make_response(text, state={'location': 25, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Присоединиться к каравану', hide=True),
+                                         button('Продолжить путь в одиночку', hide=True),
+                                     ])
+            elif user_message == "Вернуться в родной город":
+                text = "Возвращение домой всегда сладко. Ваше прибытие в родной город сопровождается радостью и праздником. Здесь вы можете отдохнуть и поделиться историями о своих приключениях."
+                return make_response(text, state={'location': 26, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Завершить приключение и остаться дома', hide=True),
+                                     ])
+
+        # Продолжение событий в Северных горах и Южных пустынях
+        if location == 24:
+            if user_message == "Переговорить с троллями":
+                text = "Ваши умения в дипломатии помогают установить контакт с троллями. Они рассказывают вам о скрытом сокровище в горах и предлагают помочь вам в обмен на часть добычи."
+                return make_response(text, state={'location': 27, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Согласиться на помощь', hide=True),
+                                         button('Отказаться и продолжить в одиночку', hide=True),
+                                     ])
+            elif user_message == "Сражаться с троллями":
+                if atr[0] > 55:
+                    text = "Ваша мощь позволяет одолеть троллей, открывая путь через горы. Вам удаётся найти путь к забытому храму, скрытому среди скал."
+                    return make_response(text, state={'location': 28, 'type_hero': 'warrior', 'atr': atr},
+                                         buttons=[
+                                             button('Исследовать храм', hide=True),
+                                         ])
+                else:
+                    text = "Битва с троллями оказывается слишком тяжёлой. Вы вынуждены отступить и переосмыслить свои планы."
+                    return make_response(text, state={'location': 24, 'type_hero': 'warrior', 'atr': atr},
+                                         buttons=[
+                                             button('Попробовать переговорить', hide=True),
+                                             button('Обойти территорию', hide=True),
+                                         ])
+            elif user_message == "Обойти их территорию":
+                text = "Обход троллей занимает больше времени, но вы избегаете конфликта и находите тихий путь через горы. Впереди новые испытания."
+                return make_response(text, state={'location': 29, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Продолжить путь', hide=True),
+                                     ])
+
+        # Подобные блоки можно продолжать развивать, добавляя новые сюжетные повороты и варианты развития событий.
+        if location == 25:
+            if user_message == "Присоединиться к каравану":
+                text = "Присоединяясь к каравану, вы обретаете новых друзей и учитесь у них многому о выживании в пустыне. Ваше путешествие становится безопаснее, и вы узнаете о легендарном городе, погребенном под песками."
+                return make_response(text, state={'location': 30, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать погребенный город', hide=True),
+                                         button('Продолжить путь с караваном', hide=True),
+                                     ])
+            elif user_message == "Продолжить путь в одиночку":
+                text = "Выбрав одиночное путешествие, вы сталкиваетесь с жестокими условиями пустыни. Но ваша решимость и умения помогают вам находить ресурсы для выживания. Вдруг, на горизонте появляется оазис."
+                return make_response(text, state={'location': 31, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать оазис', hide=True),
+                                         button('Игнорировать оазис и продолжить путь', hide=True),
+                                     ])
+
+        # Завершение приключения в родном городе
+        if location == 26:
+            text = "Праздничные гуляния в честь вашего возвращения наполняют вас гордостью и радостью. Вы решаете остаться, чтобы передать свой опыт молодым воинам и помогать своему городу."
+            return make_response(text, state={'location': 'end', 'type_hero': 'warrior', 'atr': atr},
+                                 buttons=[
+                                     button('Закончить игру', hide=True),
+                                 ])
+
+        # Исследование погребенного города
+        if location == 30:
+            if user_message == "Исследовать погребенный город":
+                text = "Сопровождаемый новыми друзьями из каравана, вы находите вход в погребенный город. Внутри вас ждут древние артефакты и неизвестные опасности."
+                return make_response(text, state={'location': 32, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Продолжить исследования', hide=True),
+                                         button('Вернуться к каравану', hide=True),
+                                     ])
+            elif user_message == "Продолжить путь с караваном":
+                text = "Продолжая путь с караваном, вы пересекаете множество торговых путей, каждый из которых раскрывает новые возможности и приключения."
+                return make_response(text, state={'location': 33, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Остановиться в следующем городе', hide=True),
+                                     ])
+
+        # Исследование оазиса
         if location == 31:
+            if user_message == "Исследовать оазис":
+                text = "Оазис оказывается спасением в жаре пустыни и домом для разнообразной флоры и фауны. В глубине оазиса вы находите древние руины, кажущиеся забытыми временем."
+                return make_response(text, state={'location': 34, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Исследовать руины', hide=True),
+                                         button('Наполнить запасы водой и продолжить путь', hide=True),
+                                     ])
+            elif user_message == "Игнорировать оазис и продолжить путь":
+                text = "Игнорируя оазис, вы продолжаете путь по безжизненной пустыне. Жажда и усталость начинают сказываться, но ваша целеустремленность помогает сохранить силы и надежду."
+                return make_response(text, state={'location': 35, 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Продолжить путь', hide=True),
+                                     ])
+        # Завершение исследования погребенного города
+        if location == 32:
+            if user_message == "Продолжить исследования":
+                text = "В глубинах древнего города вы обнаруживаете зал, полный сокровищ и древних манускриптов. Изучив их, вы узнаете о давно забытых знаниях, которые помогут вам в дальнейших приключениях."
+                return make_response(text, state={'location': 'end', 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Закончить игру', hide=True),
+                                     ])
+            elif user_message == "Вернуться к каравану":
+                text = "Возвращение к каравану оказывается мудрым решением. Объединив усилия, вы и новые друзья безопасно добираетесь до ближайшего населенного пункта, где ваш герой получает заслуженное признание."
+                return make_response(text, state={'location': 'end', 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Закончить игру', hide=True),
+                                     ])
+
+        # Завершение пути с караваном
+        if location == 33:
+            if user_message == "Остановиться в следующем городе":
+                text = "Остановка в городе позволяет вам пополнить запасы и обменять информацию с другими путешественниками. Вы находите новых друзей и решаете остаться здесь, чтобы помочь в развитии торговли и защите города."
+                return make_response(text, state={'location': 'end', 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Закончить игру', hide=True),
+                                     ])
+
+        # Завершение исследования оазиса
+        if location == 34:
+            if user_message == "Исследовать руины":
+                text = "Руины оказываются древним храмом, полным загадок и испытаний. Преодолев все препятствия, вы находите магический артефакт, усиливающий ваши способности. Вы решаете вернуться домой, чтобы изучить его возможности."
+                return make_response(text, state={'location': 'end', 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Закончить игру', hide=True),
+                                     ])
+            elif user_message == "Наполнить запасы водой и продолжить путь":
+                text = "Пополнив запасы воды, вы продолжаете свое путешествие, полное трудностей и приключений. В конечном итоге вы возвращаетесь домой, где вас ждет теплый прием и уважение за проявленные упорство и мужество."
+                return make_response(text, state={'location': 'end', 'type_hero': 'warrior', 'atr': atr},
+                                     buttons=[
+                                         button('Закончить игру', hide=True),
+                                     ])
+
+        # Завершение пути по безжизненной пустыне
+        if location == 35:
+            if user_message == "Продолжить путь":
+                text = "Долгое путешествие через пустыню заканчивается вашим возвращением в родной город, " \
+                       "где вас принимают как героя. Опыт, набранный в путешествии, делает вас мудрее и сильнее. " \
+                       "Это приключение окончено, но впереди ещё много других. Хотите начать говую игру?"
+                return make_response(text, state={'location': 0, 'type_hero': type_hero, 'atr': atr, 'old_location': 0},
+                                     buttons=[
+                                         button('Да', hide=True),
+                                         button('Нет', hide=True)
+                                     ])
+
+        if location == 36:
             text = "Вы заходите в старую таверну и встречаете там знакомого вам" + \
                    " эльфа, с которым вы когда-то вместе обучались стрельбе из лука!" + "\n" + \
-                   "Вы хотите поздороваться с ним, сделать вид, что вы его не заметили или покинуть таверну?"
+                   "Вы хотите поздороваться с ним?"
             return make_response(text,
-                                 state={'location': 32, 'type_hero': type_hero, 'atr': atr, 'old_location': location},
+                                 state={'location': 37, 'type_hero': type_hero, 'atr': atr, 'old_location': location},
                                  buttons=[
                                      button('Поздороваться с ним', hide=True),
-                                     button('Сделать вид, что вы его не заметили', hide=True),
-                                     button('Покинуть таверну', hide=True),
                                  ])
-        if location == 32:
-            if user_message == "Поздороваться с ним" or old_location == 33:
+        if location == 36:
+            if user_message == "Поздороваться с ним" or old_location == 37:
                 text = "Эльф по имени Зик узнаёт вас, но выглядит обеспокоенным." + "\n" + \
                        "Вы простие друга рассказать о том, что его тревожит." + "\n" + \
                        "Эльф рассказывает вам о подозрительных, участившихся нападениях гоблинов на его родной город." + \
                        " Вы, как его старый друг, обещаете ему помочь разобраться с этой проблемой!" + "\n" + \
                        "Придя в родной город Зика - Зиланд, куда вы решаете направиться?" + "\n" + \
                        "В таверну, гильдию искателей приключений или к форпосту городской стражи?"
-                return make_response(text, state={'location': 33, 'type_hero': type_hero, 'atr': atr,
+                return make_response(text, state={'location': 38, 'type_hero': type_hero, 'atr': atr,
                                                   'old_location': location}, buttons=[
                     button('В таверну', hide=True),
                     button('В гильдию искателей приключений', hide=True),
                     button('К форпосту городской стражи', hide=True),
                 ])
-        if location == 33:
-            if user_message == "В таверну" or old_location == 34:
+        if location == 38:
+            if user_message == "В таверну" or old_location == 39:
                 text = "Вы заходите в таверну и решаете собрать информацию о нападениях гоблинов." + \
                        " Один из посетителей - бывалый воин - рассказывает о месте нахождении лагеря гоблинов." + \
                        " Он хорошо охраняется и находится в лесу рядом со старой плотиной, одному туда соваться опасно!" + \
@@ -199,16 +516,48 @@ def handler(event, context):
                        "Плащ повысил вашу ловкость на 5 очков." + "\n" + \
                        "Куда вы решаете направиться дальше?" + "\n" + \
                        "В лагерь гоблинов, гильдию искателей приключений или к форпосту городской стражи?"
-                if old_location != 34:
+                if old_location != 39:
                     atr[2] += 5
-                return make_response(text, state={'location': 34, 'type_hero': type_hero, 'atr': atr,
+                if old_location != 38:
+                    return make_response(text, state={'location': 39, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('В лагерь гоблинов', hide=True),
+                        button('В гильдию искателей приключений', hide=True),
+                        button('К форпосту городской стражи', hide=True),
+                    ])
+                if old_location == 38:
+                    return make_response(text, state={'location': 39, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location}, buttons=[
+                        button('В лагерь гоблинов', hide=True),
+                        button('К форпосту городской стражи', hide=True),
+                    ])
+            if user_message == "В гильдию искателей приключений" or old_location == 40:
+                text = "Вы подходите к девушке, заведующей гильдией в этом городе." + \
+                       " После ваших слов о том, что вы хотите взять заказ на гоблинов," + \
+                       " она хмурится и пытается вас отговорить от этой затеи." + \
+                       " Очевидно, девушка уже повидала несколько смельчаков, взявшись за" + \
+                       " эту работу, но судя по всему они так и не вернулись." + "\n" + \
+                       "Понимая, что спорить с вами бесполезно, она советует вам обратиться" + \
+                       " за помощью к городской страже и отдаёт вам странный кулон." + \
+                       " По её словам, увидев его, городские стражники согласяться вам помочь." + "\n" + \
+                       "Куда вы решаете направиться дальше?" + "\n" + \
+                       "В лагерь гоблинов, таверну или к форпосту городской стражи?"
+                return make_response(text, state={'location': 40, 'type_hero': type_hero, 'atr': atr,
                                                   'old_location': location}, buttons=[
                     button('В лагерь гоблинов', hide=True),
-                    button('В гильдию искателей приключений', hide=True),
                     button('К форпосту городской стражи', hide=True),
                 ])
-        if location == 34:
-            if user_message == "В гильдию искателей приключений" or old_location == 35:
+            if user_message == 'К форпосту городской стражи' or old_location == 38:
+                text = "Стражники просят вас покинуть форпост и идти своей дорогой." + \
+                       "Куда вы решаете направиться?" + "\n" + \
+                       "В лагерь гоблинов?"
+                return make_response(text, state={'location': 38, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('В таверну', hide=True),
+                    button('В гильдию искателей приключений', hide=True),
+                ])
+        if location == 39:
+            if user_message == "В гильдию искателей приключений" or old_location == 40:
                 text = "Вы подходите к девушке, заведующей гильдией в этом городе." + \
                        " После ваших слов о том, что вы хотите взять заказ на гоблинов," + \
                        " она хмурится и пытается вас отговорить от этой затеи." + \
@@ -219,13 +568,38 @@ def handler(event, context):
                        " По её словам, увидев его, городские стражники согласяться вам помочь." + "\n" + \
                        "Куда вы решаете направиться дальше?" + "\n" + \
                        "В лагерь гоблинов или к форпосту городской стражи?"
-                return make_response(text, state={'location': 35, 'type_hero': type_hero, 'atr': atr,
+                return make_response(text, state={'location': 40, 'type_hero': type_hero, 'atr': atr,
                                                   'old_location': location}, buttons=[
                     button('В лагерь гоблинов', hide=True),
                     button('К форпосту городской стражи', hide=True),
                 ])
-        if location == 35:
-            if user_message == 'К форпосту городской стражи' or old_location == 36:
+            if user_message == 'В лагерь гоблинов' or old_location == 46 or old_location == 44:
+                text = "Выйдя из города, вы идёте  по лесу." + "\n" + \
+                       "Внезапно, на вас нападает отряд гоблинов, скорее всего " + \
+                       "это была засада." + "\n" + \
+                       "В бой!"
+                if type_hero == 'archer':
+                    if make_fight(atr[2], 23):
+                        return make_response(text, state={'location': 46, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location}, buttons=[
+                            button('В бой!', hide=True),
+                        ])
+                    else:
+                        return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location}, buttons=[
+                            button('В бой!', hide=True),
+                        ])
+            if user_message == 'К форпосту городской стражи' or old_location == 41:
+                text = "Стражники просят вас покинуть форпост и идти своей дорогой." + "\n" + \
+                       "Время позднее, таверна и гильдия уже закрылись." + "\n" + \
+                       "Куда вы решаете направиться?" + "\n" + \
+                       "В лагерь гоблинов?"
+                return make_response(text, state={'location': 41, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location}, buttons=[
+                    button('В лагерь гоблинов', hide=True),
+                ])
+        if location == 40:
+            if user_message == 'К форпосту городской стражи' or old_location == 41:
                 text = "Стражники просят вас покинуть форпост и идти своей дорогой." + \
                        " Увидев кулон, полученный от заведующей гильдией, они извиняются и" + \
                        " ведут вас к своему командиру." + \
@@ -235,12 +609,28 @@ def handler(event, context):
                        "Далин уверяет вас, что вы можете расчитывать на его помощь." + "\n" + \
                        "Куда вы решаете направиться?" + "\n" + \
                        "В лагерь гоблинов?"
-                return make_response(text, state={'location': 36, 'type_hero': type_hero, 'atr': atr,
+                return make_response(text, state={'location': 41, 'type_hero': type_hero, 'atr': atr,
                                                   'old_location': location}, buttons=[
                     button('В лагерь гоблинов', hide=True),
                 ])
-        if location == 36:
-            if user_message == 'В лагерь гоблинов' or old_location == 37:
+            if user_message == 'В лагерь гоблинов' or old_location == 46 or old_location == 44:
+                text = "Выйдя из города, вы идёте  по лесу." + "\n" + \
+                       "Внезапно, на вас нападает отряд гоблинов, скорее всего " + \
+                       "это была засада." + "\n" + \
+                       "В бой!"
+                if type_hero == 'archer':
+                    if make_fight(atr[2], 23):
+                        return make_response(text, state={'location': 46, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location}, buttons=[
+                            button('В бой!', hide=True),
+                        ])
+                    else:
+                        return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location}, buttons=[
+                            button('В бой!', hide=True),
+                        ])
+        if location == 41:
+            if user_message == 'В лагерь гоблинов' or old_location == 42 or old_location == 44:
                 text = "Выйдя из города, вы идёте вместе со стражниками по лесу." + "\n" + \
                        "Внезапно, на вас нападает отряд гоблинов, скорее всего это была засада." + \
                        " Командир Далин уверяет вас, что справиться с ними сам и просит вас" + \
@@ -249,92 +639,148 @@ def handler(event, context):
                        "Помочь Далину или пробраться в лагерь гоблинов?"
                 if type_hero == 'archer':
                     if make_fight(atr[2], 22):
-                        return make_response(text, state={'location': 37, 'type_hero': type_hero, 'atr': atr,
+                        return make_response(text, state={'location': 42, 'type_hero': type_hero, 'atr': atr,
                                                           'old_location': location}, buttons=[
                             button('Помочь Далину', hide=True),
                             button('Пробраться в лагерь гоблинов', hide=True),
                         ])
                     else:
-                        return make_response(text, state={'location': 50, 'type_hero': type_hero, 'atr': atr,
+                        return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
                                                           'old_location': location}, buttons=[
                             button('Помочь Далину', hide=True),
                             button('Пробраться в лагерь гоблинов', hide=True),
                         ])
-        if location == 37:
-            debaf = False
-            if old_location == 38:
-                debaf = state.get('debaf')
-            if user_message == 'Помочь Далину' or (old_location == 38 and debaf == False):
+        if location == 42:
+            if user_message == 'Помочь Далину' or (old_location == 43 and debaf == False):
                 text = "Вы успешно отражаете все атаки гоблинов и отправляетесь вместе с Далином" + \
                        " в их лагерь." + "\n" + \
                        "Далин предлогает перед тем, как нападать на гоблинов, разрушить плотину и" + \
                        " затопить их лагерь." + "\n" + \
                        "Что вы решаете сделать?" + "\n" + \
                        "Разрушить плотину, просто пойти в атаку или поджечь лес?"
-                return make_response(text, state={'location': 38, 'type_hero': type_hero, 'atr': atr,
+                return make_response(text, state={'location': 43, 'type_hero': type_hero, 'atr': atr,
                                                   'old_location': location, 'debaf': debaf}, buttons=[
                     button('Разрушить плотину', hide=True),
                     button('Просто пойти в атаку', hide=True),
                     button('Поджечь лес', hide=True),
                 ])
-            if user_message == 'Пробраться в лагерь гоблинов' or (old_location == 38 and debaf):
+            if user_message == 'Пробраться в лагерь гоблинов' or (old_location == 43 and debaf):
                 text = "Вы оставляете отряд Далина разбираться с гоблинами, организававших засаду, а" + \
                        " сами проникаете в их лагерь." + "\n" + \
                        "Что вы решаете сделать?" + "\n" + \
                        "Разрушить плотину, просто пойти в атаку или поджечь лес?"
-                return make_response(text, state={'location': 38, 'type_hero': type_hero, 'atr': atr,
+                return make_response(text, state={'location': 43, 'type_hero': type_hero, 'atr': atr,
                                                   'old_location': location, 'debaf': True}, buttons=[
                     button('Разрушить плотину', hide=True),
                     button('Просто пойти в атаку', hide=True),
                     button('Поджечь лес', hide=True),
                 ])
-        if location == 38:
-            debaf = state.get('debaf')
-            if user_message == 'Просто пойти в атаку':
+        if location == 43:
+            if user_message == 'Просто пойти в атаку' or old_location == 45 or old_location == 44:
                 if debaf:
                     text = "В лагере оказалось ещё больше гоблинов чем было в засаде." + "\n" + \
                            "В бой!"
                     if make_fight(atr[2] + atr[0], 90):
-                        return make_response(text, state={'location': 40, 'type_hero': type_hero, 'atr': atr,
-                                                          'old_location': location}, buttons=[
+                        return make_response(text, state={'location': 45, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location, 'debaf': debaf}, buttons=[
                             button('В бой!', hide=True),
                         ])
                 else:
                     text = "В лагере оказалось ещё больше гоблинов чем было в засаде." + "\n" + \
                            "Хорошо, что вы не один! В бой!"
                     if make_fight(atr[2] + atr[0], 80):
-                        return make_response(text, state={'location': 40, 'type_hero': type_hero, 'atr': atr,
-                                                          'old_location': location}, buttons=[
+                        return make_response(text, state={'location': 45, 'type_hero': type_hero, 'atr': atr,
+                                                          'old_location': location, 'debaf': debaf}, buttons=[
                             button('В бой!', hide=True),
                         ])
-            if user_message == 'Разрушить плотину':
-                text = "Вы разрушаете плотину и лагерь гоблинов смывает водой." + "\n" + \
-                       "Ответственность за разрушение плотины капитан Далин берёт на себя." + \
-                       " Вы получаете в награду за свою помощь новую броню эльфийской работы." + "\n" + \
+            if user_message == 'Разрушить плотину' or old_location == 44:
+                if debaf:
+                    text = "Вы разрушаете плотину и лагерь гоблинов смывает водой." + "\n" + \
+                           " Вы получаете в награду за свою помощь новую броню эльфийской работы." + "\n" + \
+                           " Ваше здоровье увеличилось на 20 очков." + "\n" + \
+                           "Однако, вам также пришлось уплатить долг " + \
+                           "за вред нанесённый окружающей среде, для этого вам пришлось " + \
+                           ' продать ваше "кольцо ветра".' + "\n" + \
+                           " Все ваши атрибуты понизились на 1 очко." + "\n" + \
+                           " Хотите ли вы закончить своё путешествие?"
+                    if old_location != 44:
+                        atr[0] += 19
+                        atr[1] -= 1
+                        atr[2] -= 1
+                        atr[3] -= 1
+                    return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location, 'debaf': debaf}, buttons=[
+                        button('Да', hide=True),
+                        button('Нет', hide=True),
+                    ])
+                else:
+                    text = "Вы разрушаете плотину и лагерь гоблинов смывает водой." + "\n" + \
+                           "Ответственность за разрушение плотины капитан Далин берёт на себя." + \
+                           " Вы получаете в награду за свою помощь новую броню эльфийской работы." + "\n" + \
+                           " Ваше здоровье увеличилось на 20 очков." + "\n" + \
+                           " Хотите ли вы закончить своё путешествие?"
+                    if old_location != 44:
+                        atr[0] += 20
+                    return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
+                                                      'old_location': location, 'debaf': debaf}, buttons=[
+                        button('Да', hide=True),
+                        button('Нет', hide=True),
+                    ])
+            if user_message == 'Поджечь лес' or old_location == 44:
+                text = "Вы поджигаете лес и теперь гобилам некуда бежать." + "\n" + \
+                       "Огонь перекидывается на их лагерь и большенство гоблинов " + \
+                       " погибает, лишь не многие смогли переплыть реку и сбежать." + "\n" + \
+                       "Лагерь уничтожен и ваша работа выполнена." + "\n" + \
+                       "Вы получаете в награду за свою помощь новую броню эльфийской работы. " + \
                        " Ваше здоровье увеличилось на 20 очков." + "\n" + \
+                       "Однако, вам также пришлось уплатить долг " + \
+                       "за вред нанесённый окружающей среде, для этого вам пришлось " + \
+                       ' продать ваше "кольцо ветра".' + "\n" + \
+                       " Все ваши атрибуты понизились на 1 очко." + "\n" + \
                        " Хотите ли вы закончить своё путешествие?"
-                if old_location != 39:
-                    atr[0] += 20
-                return make_response(text, state={'location': 39, 'type_hero': type_hero, 'atr': atr,
-                                                  'old_location': location}, buttons=[
+                if old_location != 44:
+                    atr[0] += 19
+                    atr[1] -= 1
+                    atr[2] -= 1
+                    atr[3] -= 1
+                return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
+                                                  'old_location': location, 'debaf': debaf}, buttons=[
                     button('Да', hide=True),
                     button('Нет', hide=True),
                 ])
-
-        if location == 39:
-            text = "Пока что - это конец!"
+        if location == 44:
+            text = "К сожалению вы терпете поражение, хотите ли вы начать своё путешествие заново?"
             return end_work(text, event)
-        if location == 40:
-            text = "Вам удалось выстоять под тяжёлым натисков гоблинов." + "\n" + \
+        if location == 45:
+            text = "Вам удалось выстоять под тяжёлым натиском гоблинов." + "\n" + \
                    "После зачистки лагеря вы находите раненого камандира Далина, к счастью " + \
-                   "рана не смертельна"
-            return make_response(text, state={'location': 39, 'type_hero': type_hero, 'atr': atr,
+                   "рана не смертельна. Вы помогаете ему добраться до лекаря и " + \
+                   "в награду за свою помощь новую броню эльфийской работы." + "\n" + \
+                   " Ваше здоровье увеличилось на 20 очков." + "\n" + \
+                   " Хотите ли вы закончить своё путешествие?"
+            return make_response(text, state={'location': 44, 'type_hero': type_hero, 'atr': atr,
                                               'old_location': location}, buttons=[
                 button('Да', hide=True),
                 button('Нет', hide=True),
             ])
-        text = "Пока что - это конец!"
-        return end_work(text, event)
+        if location == 46:
+            text = "Вам удалось выстоять под тяжёлым натиском гоблинов." + "\n" + \
+                   "Вы добираетесь до лагеря гоблинов. " + "\n" + \
+                   "Что вы решаете сделать?" + "\n" + \
+                   "Разрушить плотину, просто пойти в атаку или поджечь лес?"
+            return make_response(text, state={'location': 43, 'type_hero': type_hero, 'atr': atr,
+                                              'old_location': location, 'debaf': True}, buttons=[
+                button('Разрушить плотину', hide=True),
+                button('Просто пойти в атаку', hide=True),
+                button('Поджечь лес', hide=True),
+            ])
+        text = "Извините я вас не поняла." + "\n" + \
+               "Хотите ли вы продолжить путешествие?"
+        return make_response(text, state={'location': old_location, 'type_hero': 'archer', 'atr': atr,
+                                          'old_location': location, 'debaf': debaf, 'false_flag': False},
+                             buttons=[
+                                 button('Продолжить путешествие', hide=True),
+                             ])
     return make_response(text, state={'location': 0, 'type_hero': type_hero, 'atr': atr, 'old_location': 0},
                          buttons=[
                              button('Да', hide=True),
